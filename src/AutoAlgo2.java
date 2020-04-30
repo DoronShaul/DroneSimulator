@@ -240,6 +240,8 @@ public class AutoAlgo2 {
 	boolean once = false;
 	boolean lastRisky = false;
 	Pair<Point, String> lastRiskyPoint;
+	double lastRightLidarDist = 300;
+	double lastLeftLidarDist = 300;
 
 	double max_rotation_to_direction = 20;
 	boolean is_finish = true;
@@ -305,17 +307,19 @@ public class AutoAlgo2 {
 			}
 
 			Lidar lidar1 = drone.lidars.get(1);
-			if (lidar1.current_distance <= max_risky_distance / 3) {
+			if (lidar1.current_distance <= 65) {
 				is_risky = true;
 				isRightRisky = true;
 			}
 
 			Lidar lidar2 = drone.lidars.get(2);
-			if (lidar2.current_distance <= max_risky_distance / 3) {
+			if (lidar2.current_distance <= 65) {
 				is_risky = true;
 				isLeftRisky = true;
 			}
+			
 
+			//this is when the drone took the right or left and the the opposite direction opens up.
 			if (degrees_left.size() == 0 && once) {
 				Pair<Point, String> p = riskPoints.get(riskPoints.size() - 1);
 				if (p.getValue().equals("left") && lidar2.current_distance > 200) {
@@ -324,23 +328,22 @@ public class AutoAlgo2 {
 					spinBy(90, true);
 				}
 				once = false;
+			} else if (lidar1.current_distance > 295 && lastRightLidarDist < 270) {
+				speedDown();
+				spinBy(90, true);
+				System.out.println("90");
+				
+			} else if (lidar2.current_distance > 295 && lastLeftLidarDist < 270) {
+				speedDown();
+				spinBy(-90, true);
+				System.out.println("-90");
 			}
-			// if the diff between the right and the left is between 100-200.
-			else if (lidar.current_distance > 150 && degrees_left.size() == 0 && ((lidar1.current_distance - lidar2.current_distance > 100
-					&& lidar1.current_distance - lidar2.current_distance < 200)
-					|| (lidar1.current_distance - lidar2.current_distance < -100
-							&& lidar1.current_distance - lidar2.current_distance < -200))) {
-				// if the right has more space.
-				if (lidar1.current_distance - lidar2.current_distance > 0) {
-					speedDown();
-					spinBy(2, true);
-					System.out.println("moved by 2");
-				} else {
-					speedDown();
-					spinBy(-2, true);
-					System.out.println("moved by -2");
-				}
-			}
+			
+			lastRightLidarDist = lidar1.current_distance;
+			lastLeftLidarDist = lidar2.current_distance;
+			System.out.println("lidar1 dist: "+lidar1.current_distance);
+			System.out.println("lidar1 last dist: "+lidar1.current_distance);
+
 
 		} else {
 			if (!try_to_escape) {
@@ -414,6 +417,7 @@ public class AutoAlgo2 {
 					riskPoints.add(p);
 					speedDown();
 					spinBy(-5, true);
+					spinBy(3.5);
 					once = true;
 				}
 				// only left.
@@ -422,6 +426,7 @@ public class AutoAlgo2 {
 					riskPoints.add(p);
 					speedDown();
 					spinBy(5, true);
+					spinBy(-3.5);
 					once = true;
 				}
 

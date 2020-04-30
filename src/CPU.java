@@ -86,8 +86,8 @@ public class CPU{
 		int i=0;
 		
 		int time_to_sleep = 2;
-		if(1000/hz > 1) {
-			time_to_sleep = 1000/hz;
+		if(100/hz > 1) {
+			time_to_sleep = 100/hz;
 		}
 
 		while(true) {
