@@ -317,9 +317,9 @@ public class AutoAlgo2 {
 				is_risky = true;
 				isLeftRisky = true;
 			}
-			
 
-			//this is when the drone took the right or left and the the opposite direction opens up.
+			// this is when the drone took the right or left and the the opposite direction
+			// opens up.
 			if (degrees_left.size() == 0 && once) {
 				Pair<Point, String> p = riskPoints.get(riskPoints.size() - 1);
 				if (p.getValue().equals("left") && lidar2.current_distance > 200) {
@@ -330,20 +330,19 @@ public class AutoAlgo2 {
 				once = false;
 			} else if (lidar1.current_distance > 295 && lastRightLidarDist < 270) {
 				speedDown();
-				spinBy(90, true);
+				spinBy(45, true);
+				spinBy(45, true);
 				System.out.println("90");
-				
+
 			} else if (lidar2.current_distance > 295 && lastLeftLidarDist < 270) {
 				speedDown();
-				spinBy(-90, true);
+				spinBy(-45, true);
+				spinBy(-45, true);
 				System.out.println("-90");
 			}
-			
+
 			lastRightLidarDist = lidar1.current_distance;
 			lastLeftLidarDist = lidar2.current_distance;
-			System.out.println("lidar1 dist: "+lidar1.current_distance);
-			System.out.println("lidar1 last dist: "+lidar1.current_distance);
-
 
 		} else {
 			if (!try_to_escape) {
@@ -357,7 +356,6 @@ public class AutoAlgo2 {
 				double b = lidar2.current_distance;
 
 				int spin_by = max_angle_risky;
-				Graphics g;
 				// only front risky.
 				if (isFrontRisky && degrees_left.size() == 0) {
 					if (riskPoints.size() > 0) {
@@ -438,25 +436,9 @@ public class AutoAlgo2 {
 			}
 		}
 
-		// }
 	}
 
 	int counter = 0;
-
-//	public void doLeftRight() {
-//		if (is_finish) {
-//			leftOrRight *= -1;
-//			counter++;
-//			is_finish = false;
-//
-//			spinBy(max_rotation_to_direction * leftOrRight, false, new Func() {
-//				@Override
-//				public void method() {
-//					is_finish = true;
-//				}
-//			});
-//		}
-//	}
 
 	double lastGyroRotation = 0;
 
