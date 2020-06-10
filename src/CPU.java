@@ -89,7 +89,7 @@ public class CPU{
 		if(100/hz > 1) {
 			time_to_sleep = 100/hz;
 		}
-
+		
 		while(true) {
 			
 			if(functions_size != functions_list.size()) {
@@ -105,6 +105,7 @@ public class CPU{
 			
 			try {
 			    Thread.sleep(time_to_sleep);
+			    
 			    synchronized(this) {
 		               while(!this.isPlay) {
 		                  wait();

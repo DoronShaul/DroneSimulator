@@ -25,7 +25,8 @@ public class AutoAlgo2 {
 	ArrayList<Func> degrees_left_func;
 
 	boolean isSpeedUp = false;
-
+	boolean slowDownSide = false;
+	boolean slowDrasticFront=false;
 	Graph mGraph = new Graph();
 
 	CPU ai_cpu;
@@ -75,7 +76,13 @@ public class AutoAlgo2 {
 		}
 		if (isSpeedUp) {
 			drone.speedUp(deltaTime);
-		} else {
+		} else if (slowDownSide) {
+			drone.sidesSlowDown(deltaTime);
+		} 
+		else if(slowDrasticFront) {
+			drone.slowDrasticFront(deltaTime);
+		}
+		else {
 			drone.slowDown(deltaTime);
 		}
 
@@ -83,11 +90,30 @@ public class AutoAlgo2 {
 
 	public void speedUp() {
 		isSpeedUp = true;
+		slowDownSide = false;
+		slowDrasticFront=false;
+
 	}
 
 	public void speedDown() {
 		isSpeedUp = false;
+		slowDownSide = false;
+		slowDrasticFront=false;
+
 	}
+
+	public void slowDownSides() {
+		isSpeedUp = false;
+		slowDrasticFront=false;
+		slowDownSide=true;
+	}
+	
+	public void slowDrasticFront() {
+		slowDrasticFront=true;
+		isSpeedUp = false;
+		slowDownSide = false;
+	}
+	
 
 	public void updateMapByLidars() {
 		Point dronePoint = drone.getOpticalSensorLocation();
@@ -236,6 +262,7 @@ public class AutoAlgo2 {
 	boolean isRightRisky = false;
 	boolean isLeftRisky = false;
 	boolean isLeftBigger = false;
+	boolean shouldSpeedUp = false;
 	double sideLidarsDiff = 0;
 	boolean once = false;
 	boolean lastRisky = false;
@@ -245,13 +272,12 @@ public class AutoAlgo2 {
 
 	double max_rotation_to_direction = 20;
 	boolean is_finish = true;
-	boolean isLeftRightRotationEnable = true;// **
+	boolean isLeftRightRotationEnable = true;
 
 	boolean is_risky = false;
 	int max_risky_distance = 150;
 	boolean try_to_escape = false;
 	double risky_dis = 0;
-	int max_angle_risky = 10;
 
 	boolean is_lidars_max = false;
 
@@ -262,12 +288,19 @@ public class AutoAlgo2 {
 	boolean start_return_home = false;
 
 	Point init_point;
+	int currTime=0;
+	int realTime=0;
+	boolean isRightTurn=false;
+	boolean isLeftTurn=false;
+	
+
+
 
 	public void ai(int deltaTime) {
 		if (!SimulationWindow.toogleAI) {
 			return;
 		}
-
+		
 		if (is_init) {
 			speedUp();
 			Point dronePoint = drone.getOpticalSensorLocation();
@@ -276,7 +309,16 @@ public class AutoAlgo2 {
 			mGraph.addVertex(dronePoint);
 			is_init = false;
 		}
-
+		
+		currTime++;
+		if(currTime == 360) 
+		{
+			System.out.println(++realTime);
+			currTime=0;
+		}
+		
+		
+		
 		Point dronePoint = drone.getOpticalSensorLocation();
 
 		if (SimulationWindow.return_home) {
@@ -296,9 +338,12 @@ public class AutoAlgo2 {
 				mGraph.addVertex(dronePoint);
 			}
 		}
-
+		//not a risky state
 		if (!is_risky) {
-			speedUp();
+			if (shouldSpeedUp && degrees_left.size() == 0) {
+				speedUp();
+				shouldSpeedUp = false;
+			}
 			Lidar lidar = drone.lidars.get(0);
 			if (lidar.current_distance <= max_risky_distance) {
 				is_risky = true;
@@ -307,13 +352,13 @@ public class AutoAlgo2 {
 			}
 
 			Lidar lidar1 = drone.lidars.get(1);
-			if (lidar1.current_distance <= 65) {
+			if (lidar1.current_distance <= 45) {
 				is_risky = true;
 				isRightRisky = true;
 			}
 
 			Lidar lidar2 = drone.lidars.get(2);
-			if (lidar2.current_distance <= 65) {
+			if (lidar2.current_distance <= 45) {
 				is_risky = true;
 				isLeftRisky = true;
 			}
@@ -328,112 +373,98 @@ public class AutoAlgo2 {
 					spinBy(90, true);
 				}
 				once = false;
-			} else if (lidar1.current_distance > 295 && lastRightLidarDist < 270) {
-				speedDown();
+			} else if (lidar1.current_distance > 295 && lastRightLidarDist < 100) {
 				spinBy(45, true);
-				spinBy(45, true);
-				System.out.println("90");
+				//spinBy(45, true);
 
-			} else if (lidar2.current_distance > 295 && lastLeftLidarDist < 270) {
-				speedDown();
+			} else if (lidar2.current_distance > 295 && lastLeftLidarDist < 100) {
 				spinBy(-45, true);
-				spinBy(-45, true);
-				System.out.println("-90");
+				//spinBy(-45, true);
 			}
 
 			lastRightLidarDist = lidar1.current_distance;
 			lastLeftLidarDist = lidar2.current_distance;
 
-		} else {
-			if (!try_to_escape) {
-				try_to_escape = true;
-				Lidar lidar = drone.lidars.get(0);
-				double frontLidar = lidar.current_distance;
-				Lidar lidar1 = drone.lidars.get(1);
-				double a = lidar1.current_distance;
+		} else { // risky state
+			once=false;
+			Lidar lidar = drone.lidars.get(0);
+			double frontLidarDist = lidar.current_distance;
+			Lidar lidar1 = drone.lidars.get(1);
+			double rightLidarDist = lidar1.current_distance;
 
-				Lidar lidar2 = drone.lidars.get(2);
-				double b = lidar2.current_distance;
+			Lidar lidar2 = drone.lidars.get(2);
+			double leftLidarDist = lidar2.current_distance;
 
-				int spin_by = max_angle_risky;
-				// only front risky.
-				if (isFrontRisky && degrees_left.size() == 0) {
-					if (riskPoints.size() > 0) {
-						lastRiskyPoint = riskPoints.get(riskPoints.size() - 1);
+			int spin_by = 0;
+			// only front risky.
+			if (isFrontRisky && degrees_left.size() == 0) {
+				
+				if(frontLidarDist < 80) {
+					slowDrasticFront();
+					sideLidarsDiff = lidar1.current_distance - lidar2.current_distance;
+					if(sideLidarsDiff < 0) {
+						spin_by = -60;
+					} else {
+						spin_by = 60;
 					}
-					if (riskPoints.size() != 0 && (lastRiskyPoint.getValue().equals("right")
-							|| lastRiskyPoint.getValue().equals("left"))) {
-						if (lastRiskyPoint.getValue().equals("right")) {
-							speedDown();
-							spinBy(30, true);
-						} else if (lastRiskyPoint.getValue().equals("left")) {
-							speedDown();
-							spinBy(-30, true);
-						}
-
-					} else if (riskPoints.size() == 0 || lastRiskyPoint.getValue().equals("front")) {
-						sideLidarsDiff = lidar1.current_distance - lidar2.current_distance;
-						if (sideLidarsDiff < 0) {
-							isLeftBigger = true;
-						} else {
-							isLeftBigger = false;
-						}
-
-						if (isLeftBigger) {
-							if (sideLidarsDiff > -50) {
-								spin_by = -10;
-								if (frontLidar < 70) {
-									spin_by = -60;
-								}
-							} else if (sideLidarsDiff > -100) {
-								spin_by = -30;
-							} else {
-								spin_by = -60;
-							}
-						} else {
-							if (sideLidarsDiff < 50) {
-								spin_by = 10;
-								if (frontLidar < 70) {
-									spin_by = 60;
-								}
-							} else if (sideLidarsDiff < 100) {
-								spin_by = 30;
-							} else {
-								spin_by = 60;
-							}
-						}
-						speedDown();
-						spinBy(spin_by, true);
+				} else {
+					speedDown();
+					sideLidarsDiff = lidar1.current_distance - lidar2.current_distance;
+					if(sideLidarsDiff < 0) {
+						spin_by = -20;
+					} else {
+						spin_by = 20;
 					}
-					Pair<Point, String> p = new Pair<Point, String>(dronePoint, "front");
-					riskPoints.add(p);
-
-				}
-				// only right risky.
-				else if (isRightRisky && !isLeftRisky && degrees_left.size() == 0) {
-					Pair<Point, String> p = new Pair<Point, String>(dronePoint, "right");
-					riskPoints.add(p);
-					speedDown();
-					spinBy(-5, true);
-					spinBy(3.5);
-					once = true;
-				}
-				// only left.
-				else if (!isRightRisky && isLeftRisky && degrees_left.size() == 0) {
-					Pair<Point, String> p = new Pair<Point, String>(dronePoint, "left");
-					riskPoints.add(p);
-					speedDown();
-					spinBy(5, true);
-					spinBy(-3.5);
-					once = true;
 				}
 
-				try_to_escape = false;
-				is_risky = false;
-				isFrontRisky = false;
-				isRightRisky = false;
-				isLeftRisky = false;
+				Pair<Point, String> p = new Pair<Point, String>(dronePoint, "front");
+				riskPoints.add(p);
+				shouldSpeedUp = true;
+				spinBy(spin_by, true);
 			}
+
+			// only right risky.
+			else if (isRightRisky && !isLeftRisky && degrees_left.size() == 0) {
+				slowDownSides();
+				if (rightLidarDist<35) {
+					spinBy(-6, true);
+					spinBy(2);
+
+				}
+				else { //right lidar > 45 && <85
+					spinBy(-2, true);
+					spinBy(1);
+
+				}
+				Pair<Point, String> p = new Pair<Point, String>(dronePoint, "right");
+				riskPoints.add(p);
+				shouldSpeedUp = true;
+				once = true;
+			}
+			// only left risky.
+			else if (!isRightRisky && isLeftRisky && degrees_left.size() == 0) {
+				slowDownSides();
+				if (leftLidarDist<35) {
+					spinBy(6, true);
+					spinBy(-2);
+
+				
+				}
+				else { //right lidar > 45 && <85
+					spinBy(2, true);
+					spinBy(-1);
+					
+				}
+				Pair<Point, String> p = new Pair<Point, String>(dronePoint, "left");
+				riskPoints.add(p);
+				shouldSpeedUp = true;
+				once = true;
+			}
+
+			is_risky = false;
+			isFrontRisky = false;
+			isRightRisky = false;
+			isLeftRisky = false;
 		}
 
 	}
