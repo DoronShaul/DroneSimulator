@@ -1,12 +1,9 @@
-import java.util.Iterator;
 import java.util.Set;
 
 import javax.swing.JFrame;
 
-import org.jgrapht.*;
 import org.jgrapht.graph.*;
-import org.jgrapht.alg.shortestpath.AllDirectedPaths;
-import org.jgrapht.alg.spanning.*;
+
 import org.jgrapht.ext.JGraphXAdapter;
 import org.jgrapht.graph.DefaultEdge;
 
@@ -17,7 +14,7 @@ import com.mxgraph.swing.mxGraphComponent;
 public class Graph {
 
 	DefaultDirectedGraph<Point, DefaultEdge> g;
-    private DefaultWeightedEdge e1;
+	
     
     public Graph() {
     	g = new DefaultDirectedGraph<Point, DefaultEdge>(DefaultEdge.class);
@@ -32,7 +29,6 @@ public class Graph {
         g.addVertex(name);
         if(last_vertex != null) 
         	g.addEdge(last_vertex, name);
-        //graph.addVertex(name);
     }
     
     public Point getLastElement(Set<Point> c) {
@@ -72,20 +68,4 @@ public class Graph {
         new_window.setLocationByPlatform(true);
         new_window.setVisible(true);
     }
-
-    /*public SimpleWeightedGraph<String,DefaultWeightedEdge> getGraph() {
-        return graph;
-    }*/
-
-    public void getSpanningTree() {
-        KruskalMinimumSpanningTree k=new KruskalMinimumSpanningTree(g);
-        System.out.println(k.getSpanningTree().toString());
-        //KruskalMinimumSpanningTree k1=new KruskalMinimumSpanningTree(graph);
-        //System.out.println(k1.getEdgeSet().toString());   
-    }
-
-    /*public void getSpanningTreeCost() {
-        KruskalMinimumSpanningTree k=new KruskalMinimumSpanningTree(graph);
-        System.out.println(k.getSpanningTreeCost());
-    }*/ 
 }

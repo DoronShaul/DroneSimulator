@@ -28,6 +28,7 @@ public class SimulationWindow {
 
 	public static JLabel info_label;
 	public static boolean return_home = false;
+	public static boolean returnedHome = false;
 	boolean toogleStop = true;
 	boolean isFirst = true;
 	private void initialize() {
@@ -234,7 +235,8 @@ public class SimulationWindow {
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				algo2.mGraph.drawGraph();
+				//algo2.mGraph.drawGraph();
+				algo2.myGraph.drawGraph();
 			}
 		});
 		Graph.setBounds(1600, 400, 120, 50);
@@ -261,6 +263,10 @@ public class SimulationWindow {
 		if(isFirst) {
 			stopBtn.doClick();
 			isFirst = false;
+		}
+		if(returnedHome) {
+			stopBtn.doClick();
+			returnedHome = false;
 		}
 	}
 	public JLabel info_label2;

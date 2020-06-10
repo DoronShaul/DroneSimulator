@@ -17,7 +17,7 @@ public class AutoAlgo2 {
 	Drone drone;
 	Point droneStartingPoint;
 
-	ArrayList<Point> points;
+	ArrayList<Pair<Point, Integer>> points;
 	ArrayList<Pair<Point, String>> riskPoints;
 
 	int isRotating;
@@ -28,13 +28,14 @@ public class AutoAlgo2 {
 	boolean slowDownSide = false;
 	boolean slowDrasticFront=false;
 	Graph mGraph = new Graph();
+	MyGraph myGraph = new MyGraph();
 
 	CPU ai_cpu;
 
 	public AutoAlgo2(Map realMap) {
 		degrees_left = new ArrayList<>();
 		degrees_left_func = new ArrayList<>();
-		points = new ArrayList<Point>();
+		points = new ArrayList<Pair<Point,Integer>>();
 		riskPoints = new ArrayList<Pair<Point, String>>();
 
 		drone = new Drone(realMap);
@@ -107,13 +108,13 @@ public class AutoAlgo2 {
 		slowDrasticFront=false;
 		slowDownSide=true;
 	}
-	
+
 	public void slowDrasticFront() {
 		slowDrasticFront=true;
 		isSpeedUp = false;
 		slowDownSide = false;
 	}
-	
+
 
 	public void updateMapByLidars() {
 		Point dronePoint = drone.getOpticalSensorLocation();
@@ -132,7 +133,6 @@ public class AutoAlgo2 {
 					&& lidar.current_distance < WorldParams.lidarLimit - WorldParams.lidarNoise) {
 				Point p = Tools.getPointByDistance(fromPoint, rotation, lidar.current_distance);
 				setPixel(p.x, p.y, PixelState.blocked);
-				// fineEdges((int)p.x,(int)p.y);
 			}
 		}
 	}
@@ -185,7 +185,7 @@ public class AutoAlgo2 {
 
 	public void paintPoints(Graphics g) {
 		for (int i = 0; i < points.size(); i++) {
-			Point p = points.get(i);
+			Point p = points.get(i).getKey();
 			Color color = Color.BLACK;
 			g.setColor(color);
 			g.drawOval((int) p.x + (int) drone.startPoint.x - 10, (int) p.y + (int) drone.startPoint.y - 10, 20, 20);
@@ -283,59 +283,93 @@ public class AutoAlgo2 {
 
 	double save_point_after_seconds = 3;
 
-	double max_distance_between_points = 150;
+	double max_distance_between_points =170 ;
 
 	boolean start_return_home = false;
 
 	Point init_point;
-	int currTime=0;
-	int realTime=0;
+	Pair<Point, Integer> initPair;
+	int countTime=0;
+	public static int realTime=0;
+	public static int pointWeight=0;
 	boolean isRightTurn=false;
 	boolean isLeftTurn=false;
-	
+	boolean addPoint=false;
+	boolean returnHome=false;
+	int spin_by = 0;
+	boolean turnAround = true;
+	double angle;
+	boolean shouldSpinByAngle = false;
 
 
 
 	public void ai(int deltaTime) {
+
 		if (!SimulationWindow.toogleAI) {
 			return;
 		}
-		
+
 		if (is_init) {
 			speedUp();
 			Point dronePoint = drone.getOpticalSensorLocation();
 			init_point = new Point(dronePoint);
-			points.add(dronePoint);
+			initPair = new Pair<Point, Integer>(dronePoint, 0);
+			points.add(initPair);
 			mGraph.addVertex(dronePoint);
+			myGraph.addVertexAndEdge(initPair);
 			is_init = false;
 		}
-		
-		currTime++;
-		if(currTime == 360) 
+
+		countTime++;
+		if(countTime == 360) 
 		{
-			System.out.println(++realTime);
-			currTime=0;
+			realTime++;
+			pointWeight++;
+			countTime=0;
 		}
-		
-		
-		
+
+
+
 		Point dronePoint = drone.getOpticalSensorLocation();
 
-		if (SimulationWindow.return_home) {
-
-			if (Tools.getDistanceBetweenPoints(getLastPoint(), dronePoint) < max_distance_between_points) {
-				if (points.size() <= 1 && Tools.getDistanceBetweenPoints(getLastPoint(),
-						dronePoint) < max_distance_between_points / 5) {
-					speedDown();
-				} else {
-					removeLastPoint();
-				}
+		if (SimulationWindow.return_home || realTime>=150 ) {
+			returnHome=true;
+			//removeLastPoint();
+			if(turnAround) {
+				slowDrasticFront();
+				spinBy(180, true);
+				turnAround = false;
+				shouldSpeedUp = true;
 			}
+			angle = angleBetweenPoints(dronePoint, myGraph.getLastPoint());
+			if(Tools.getDistanceBetweenPoints(dronePoint, myGraph.getLastPoint()) < 5) {
+				removeLastPoint();
+				myGraph.removeLastVertex();
+				shouldSpinByAngle = true;
+			}
+			if(degrees_left.size()==0) {
+				speedDown();
+				spinBy(angle, true);
+				shouldSpeedUp = true;
+				shouldSpinByAngle = false;
+			}
+			
+			if(0 <= dronePoint.x && dronePoint.x <= 5) {
+				SimulationWindow.returnedHome = true;
+			}
+
 		} else {
 
-			if (Tools.getDistanceBetweenPoints(getLastPoint(), dronePoint) >= max_distance_between_points) {
-				points.add(dronePoint);
-				mGraph.addVertex(dronePoint);
+			if (Tools.getDistanceBetweenPoints(getLastPoint(), dronePoint) >= max_distance_between_points || addPoint) {
+				if(pointWeight!=0) {
+					Pair<Point, Integer> pair = new Pair<Point, Integer>(dronePoint, pointWeight);
+					points.add(pair);
+					mGraph.addVertex(dronePoint);
+					myGraph.addVertexAndEdge(pair);
+					pointWeight = 0;
+				}
+				addPoint=false;
+
 			}
 		}
 		//not a risky state
@@ -371,15 +405,20 @@ public class AutoAlgo2 {
 					spinBy(-90, true);
 				} else if (p.getValue().equals("right") && lidar1.current_distance > 200) {
 					spinBy(90, true);
+
 				}
 				once = false;
-			} else if (lidar1.current_distance > 295 && lastRightLidarDist < 100) {
+			} else if (lidar1.current_distance > 270 && lastRightLidarDist < 100) {
 				spinBy(45, true);
-				//spinBy(45, true);
+				if(!returnHome) {
+					addPoint=true;
+				}
 
-			} else if (lidar2.current_distance > 295 && lastLeftLidarDist < 100) {
+			} else if (lidar2.current_distance > 270 && lastLeftLidarDist < 100) {
 				spinBy(-45, true);
-				//spinBy(-45, true);
+				if(!returnHome) {
+					addPoint=true;
+				}
 			}
 
 			lastRightLidarDist = lidar1.current_distance;
@@ -395,10 +434,10 @@ public class AutoAlgo2 {
 			Lidar lidar2 = drone.lidars.get(2);
 			double leftLidarDist = lidar2.current_distance;
 
-			int spin_by = 0;
+
 			// only front risky.
 			if (isFrontRisky && degrees_left.size() == 0) {
-				
+
 				if(frontLidarDist < 80) {
 					slowDrasticFront();
 					sideLidarsDiff = lidar1.current_distance - lidar2.current_distance;
@@ -416,12 +455,12 @@ public class AutoAlgo2 {
 						spin_by = 20;
 					}
 				}
-
 				Pair<Point, String> p = new Pair<Point, String>(dronePoint, "front");
 				riskPoints.add(p);
 				shouldSpeedUp = true;
 				spinBy(spin_by, true);
 			}
+
 
 			// only right risky.
 			else if (isRightRisky && !isLeftRisky && degrees_left.size() == 0) {
@@ -448,12 +487,12 @@ public class AutoAlgo2 {
 					spinBy(6, true);
 					spinBy(-2);
 
-				
+
 				}
 				else { //right lidar > 45 && <85
 					spinBy(2, true);
 					spinBy(-1);
-					
+
 				}
 				Pair<Point, String> p = new Pair<Point, String>(dronePoint, "left");
 				riskPoints.add(p);
@@ -564,19 +603,17 @@ public class AutoAlgo2 {
 
 	public Point getLastPoint() {
 		if (points.size() == 0) {
-			return init_point;
+			return initPair.getKey();
 		}
 
-		Point p1 = points.get(points.size() - 1);
+		Point p1 = points.get(points.size() - 1).getKey();
 		return p1;
 	}
 
-	public Point removeLastPoint() {
-		if (points.isEmpty()) {
-			return init_point;
+	public void removeLastPoint() {
+		if (!points.isEmpty()) {
+			points.remove(points.size() - 1);
 		}
-
-		return points.remove(points.size() - 1);
 	}
 
 	public Point getAvgLastPoint() {
@@ -584,9 +621,15 @@ public class AutoAlgo2 {
 			return init_point;
 		}
 
-		Point p1 = points.get(points.size() - 1);
-		Point p2 = points.get(points.size() - 2);
+		Point p1 = points.get(points.size() - 1).getKey();
+		Point p2 = points.get(points.size() - 2).getKey();
 		return new Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+	}
+	
+	public double angleBetweenPoints(Point p, Point q) {
+		double deltaX = Math.abs(q.x - p.x);
+		double deltaY = Math.abs(q.y - p.y);
+		return Math.toDegrees(Math.atan2(deltaY, deltaX));
 	}
 
 }
