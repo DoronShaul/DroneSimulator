@@ -1,7 +1,6 @@
 import javax.imageio.ImageIO;
 
 import java.awt.Graphics;
-import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.text.DecimalFormat;
@@ -121,8 +120,21 @@ public class Drone {
 		}
 	}
 	
+
+	/**
+	 * this method is the speed up of the return home procedure.
+	 * @param deltaTime
+	 */
 	public void speedUpReturnHome(int deltaTime) {
 		WorldParams.max_speed = 1.7;
+		speed += (WorldParams.accelerate_per_second*deltaTime/1000);
+		if(speed > WorldParams.max_speed) {
+			speed =WorldParams.max_speed;
+		}
+	}
+	
+	public void stop(int deltaTime) {
+		WorldParams.max_speed = 0;
 		speed += (WorldParams.accelerate_per_second*deltaTime/1000);
 		if(speed > WorldParams.max_speed) {
 			speed =WorldParams.max_speed;
@@ -139,6 +151,11 @@ public class Drone {
 			speed=0.4;
 		}
 	}
+	
+	/**
+	 * this method slows the drone down when there is a risk from the sides.
+	 * @param deltaTime
+	 */
 	public void sidesSlowDown(int deltaTime) {
 		WorldParams.max_speed = 1.5;
 		speed -= (WorldParams.accelerate_per_second*deltaTime/1000);
@@ -150,6 +167,11 @@ public class Drone {
 			speed=0.4;
 		}
 	}
+	
+	/**
+	 * this method slows the drone down drastically when there is a very close risk from the front. 
+	 * @param deltaTime
+	 */
 	public void slowDrasticFront(int deltaTime) {
 		WorldParams.max_speed = 1;
 		speed -= (WorldParams.accelerate_per_second*deltaTime/1000);

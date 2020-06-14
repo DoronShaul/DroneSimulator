@@ -1,5 +1,4 @@
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
 import java.util.ArrayList;
 
@@ -28,6 +27,7 @@ public class AutoAlgo2 {
 	boolean isSpeedUpHome = false;
 	boolean slowDownSide = false;
 	boolean slowDrasticFront=false;
+	//boolean stop = false;
 	Graph mGraph = new Graph();
 	MyGraph myGraph = new MyGraph();
 
@@ -87,6 +87,9 @@ public class AutoAlgo2 {
 		else if(isSpeedUpHome) {
 			drone.speedUpReturnHome(deltaTime);
 		}
+//		else if(stop) {
+//			drone.st
+//		}
 		else {
 			drone.slowDown(deltaTime);
 		}
@@ -209,6 +212,10 @@ public class AutoAlgo2 {
 
 	}
 
+	/**
+	 * this method paints the risky areas. cyan dot when the risk is from the front, red when it's from the left, and black if it's right. 
+	 * @param g
+	 */
 	public void PaintProblems(Graphics g) {
 		for (int i = 0; i < riskPoints.size(); i++) {
 			Pair<Point, String> pair = riskPoints.get(i);
@@ -227,26 +234,6 @@ public class AutoAlgo2 {
 				g.setColor(color);
 				g.fillOval((int) pair.getKey().x + (int) drone.startPoint.x - 10,
 						(int) pair.getKey().y + (int) drone.startPoint.y - 10, 5, 5);
-			} else if (pair.getValue() == "right and front") {
-				Color color = Color.GREEN;
-				g.setColor(color);
-				g.fillOval((int) pair.getKey().x + (int) drone.startPoint.x - 10,
-						(int) pair.getKey().y + (int) drone.startPoint.y - 10, 5, 5);
-			} else if (pair.getValue() == "left and front") {
-				Color color = Color.MAGENTA;
-				g.setColor(color);
-				g.fillOval((int) pair.getKey().x + (int) drone.startPoint.x - 10,
-						(int) pair.getKey().y + (int) drone.startPoint.y - 10, 5, 5);
-			} else if (pair.getValue() == "left and right") {
-				Color color = Color.ORANGE;
-				g.setColor(color);
-				g.fillOval((int) pair.getKey().x + (int) drone.startPoint.x - 10,
-						(int) pair.getKey().y + (int) drone.startPoint.y - 10, 5, 5);
-			} else if (pair.getValue() == "all") {
-				Color color = Color.PINK;
-				g.setColor(color);
-				g.fillOval((int) pair.getKey().x + (int) drone.startPoint.x - 10,
-						(int) pair.getKey().y + (int) drone.startPoint.y - 10, 5, 5);
 			}
 
 		}
@@ -260,7 +247,7 @@ public class AutoAlgo2 {
 
 		paintBlindMap(g);
 		paintPoints(g);
-		PaintProblems(g);
+		//PaintProblems(g);
 
 		drone.paint(g);
 
@@ -279,7 +266,7 @@ public class AutoAlgo2 {
 	boolean isLeftBigger = false;
 	boolean shouldSpeedUp = false;
 	double sideLidarsDiff = 0;
-	boolean once = false;
+	boolean oppositeDirectionTurn = false;
 	boolean lastRisky = false;
 	Pair<Point, String> lastRiskyPoint;
 	double lastRightLidarDist = 300;
@@ -326,6 +313,7 @@ public class AutoAlgo2 {
 			return;
 		}
 
+		//initialize.
 		if (is_init) {
 			speedUp();
 			Point dronePoint = drone.getOpticalSensorLocation();
@@ -350,12 +338,14 @@ public class AutoAlgo2 {
 
 		Point dronePoint = drone.getOpticalSensorLocation();
 
+		//if the battery of the drone is at 50% (150 seconds), or the return home button clicked.
 		if (SimulationWindow.return_home || realTime>=150) {
 			returnHome=true;
 			stopAI = true;
-			//removeLastPoint();
 			if(!myGraph.isEmpty()) {
+				//calculate the angle between the drone and the last vertex of the graph.
 				angle = angleBetweenPoints( myGraph.getLastPoint(),dronePoint);
+				//the first step back home.
 				if(turnAround) {
 					slowDrasticFront();
 					double spin = angle - drone.getRotation();
@@ -370,8 +360,7 @@ public class AutoAlgo2 {
 					if(degrees_left.isEmpty()) {
 						speedUpHome();
 					}
-					//lastEdgeWeight = myGraph.getLastEdgeWeight();
-
+					//if the drone is at most 20 cm from the last vertex and there is no turns left to do, delete the last vertex and calculate the angle to the next vertex.
 					if(Tools.getDistanceBetweenPoints(myGraph.getLastPoint(), dronePoint) <= 20 && degrees_left.isEmpty()) {
 						myGraph.removeLastEdge();
 						myGraph.removeLastVertex();
@@ -388,24 +377,21 @@ public class AutoAlgo2 {
 							slowDrasticFront();
 							spinBy(spin, true);
 
-						} else {
-							//stop.
 						}
 					}
 				}				
 				
-			}
-			/*if(!degrees_left.isEmpty()) {
-				System.out.println(degrees_left.get(0));
 			} else {
-				System.out.println("empty");
-			}*/
+				drone.stop();
+				ai_cpu.stop();
+				drone.stop(deltaTime);
+			}
+			
 
 
-		} else {
-			if(points.size()>1)
-				System.out.println(angleBetweenPoints(myGraph.getBeforeLastPoint(), myGraph.getLastPoint()));
-
+		}
+		else {
+			//if the distance between the current point and the last point is at least 50 or the drone took a hard turn, adds a vertex to the graph.
 			if (Tools.getDistanceBetweenPoints(getLastPoint(), dronePoint) >= max_distance_between_points || addPoint) {
 				if(pointWeight!=0) {
 					Pair<Point, Integer> pair = new Pair<Point, Integer>(dronePoint, pointWeight);
@@ -419,8 +405,9 @@ public class AutoAlgo2 {
 			}
 		}
 		if(!stopAI) {
-			//not a risky state
+			//not risky state
 			if (!is_risky) {
+				//if there is no turns left to do, speed up.
 				if (shouldSpeedUp && degrees_left.size() == 0) {
 					speedUp();
 					shouldSpeedUp = false;
@@ -446,7 +433,7 @@ public class AutoAlgo2 {
 
 				// this is when the drone took the right or left and the the opposite direction
 				// opens up.
-				if (degrees_left.size() == 0 && once) {
+				if (degrees_left.size() == 0 && oppositeDirectionTurn) {
 					Pair<Point, String> p = riskPoints.get(riskPoints.size() - 1);
 					if (p.getValue().equals("left") && lidar2.current_distance > 200) {
 						spinBy(-90, true);
@@ -454,7 +441,7 @@ public class AutoAlgo2 {
 						spinBy(90, true);
 
 					}
-					once = false;
+					oppositeDirectionTurn = false;
 				} else if (lidar1.current_distance > 270 && lastRightLidarDist < 100) {
 					spinBy(45, true);
 					if(!returnHome) {
@@ -472,7 +459,7 @@ public class AutoAlgo2 {
 				lastLeftLidarDist = lidar2.current_distance;
 
 			} else { // risky state
-				once=false;
+				oppositeDirectionTurn=false;
 				Lidar lidar = drone.lidars.get(0);
 				double frontLidarDist = lidar.current_distance;
 				Lidar lidar1 = drone.lidars.get(1);
@@ -482,7 +469,7 @@ public class AutoAlgo2 {
 				double leftLidarDist = lidar2.current_distance;
 
 
-				// only front risky.
+				// only front is risky.
 				if (isFrontRisky && degrees_left.size() == 0) {
 
 					if(frontLidarDist < 80) {
@@ -525,7 +512,7 @@ public class AutoAlgo2 {
 					Pair<Point, String> p = new Pair<Point, String>(dronePoint, "right");
 					riskPoints.add(p);
 					shouldSpeedUp = true;
-					once = true;
+					oppositeDirectionTurn = true;
 				}
 				// only left risky.
 				else if (!isRightRisky && isLeftRisky && degrees_left.size() == 0) {
@@ -544,7 +531,7 @@ public class AutoAlgo2 {
 					Pair<Point, String> p = new Pair<Point, String>(dronePoint, "left");
 					riskPoints.add(p);
 					shouldSpeedUp = true;
-					once = true;
+					oppositeDirectionTurn = true;
 				}
 
 				is_risky = false;

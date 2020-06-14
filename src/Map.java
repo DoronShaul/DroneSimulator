@@ -2,7 +2,6 @@ import java.io.File;
 import java.io.IOException;
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Window;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 

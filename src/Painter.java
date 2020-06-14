@@ -4,13 +4,11 @@ import javax.swing.JComponent;
 
 
 public class Painter extends JComponent{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	AutoAlgo2 algo;
-//	AutoAlgo1 algo;
-//	
-//	
-//	public Painter(AutoAlgo1 algo) {
-//		this.algo = algo;
-//	}
 	
 	public Painter(AutoAlgo2 algo2) {
 		this.algo = algo2;
