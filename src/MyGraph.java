@@ -88,8 +88,48 @@ public class MyGraph {
 	public Point getLastPoint() {
 		return pointsList.get(pointsList.size()-1);
 	}
+	public Point getBeforeLastPoint() {
+		return pointsList.get(pointsList.size()-2);
+	}
+	
+	
+	public void removeLastPoint() {
+		if(!pointsList.isEmpty()) {
+			pointsList.remove(pointsList.size()-1);
+		}
+	}
+	
+	public DefaultWeightedEdge getLastEdge() {
+		DefaultWeightedEdge answer = null;
+		Set<DefaultWeightedEdge> set = graph.edgeSet();
+		for(DefaultWeightedEdge e : set) {
+			answer = e;
+		}
+		return answer;
+	}
 	
 	public void removeLastVertex() {
-		graph.removeVertex(getLastElement(graph.vertexSet()));
+		Point lastVertex = getLastElement(graph.vertexSet());
+		if(lastVertex != null) {
+			graph.removeVertex(lastVertex);
+		}
+	}
+	public void removeLastEdge() {
+		DefaultWeightedEdge lastEdge = getLastEdge();
+		if(lastEdge != null) {
+			graph.removeEdge(getLastEdge());
+		}
+	}
+	
+	public int getLastEdgeWeight() {
+		DefaultWeightedEdge lastEdge = getLastEdge();
+		if(lastEdge != null) {
+			return (int)graph.getEdgeWeight(lastEdge);
+		}
+		return 0;
+	}
+
+	public boolean isEmpty() {
+		return graph.vertexSet().isEmpty();
 	}
 }

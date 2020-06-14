@@ -264,10 +264,11 @@ public class SimulationWindow {
 			stopBtn.doClick();
 			isFirst = false;
 		}
-		if(returnedHome) {
+		 if(returnedHome) {
+			System.out.println("clicked");
 			stopBtn.doClick();
 			returnedHome = false;
-		}
+		} 
 	}
 	public JLabel info_label2;
 	public static boolean toogleRealMap = true;
@@ -305,8 +306,6 @@ public class SimulationWindow {
 		CPU infoCPU = new CPU(6,"update_info");
 		infoCPU.addFunction(this::updateInfo);
 		infoCPU.play();
-		
-		
 
 	}
 

@@ -91,7 +91,6 @@ public class CPU{
 		}
 		
 		while(true) {
-			
 			if(functions_size != functions_list.size()) {
 				functions_size = functions_list.size();
 				last_sample_times = new int[functions_size];
