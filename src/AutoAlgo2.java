@@ -338,8 +338,8 @@ public class AutoAlgo2 {
 
 		Point dronePoint = drone.getOpticalSensorLocation();
 
-		//if the battery of the drone is at 50% (150 seconds), or the return home button clicked.
-		if (SimulationWindow.return_home || realTime>=150) {
+		//if the battery of the drone is at 50% (130 seconds), or the return home button clicked.
+		if (SimulationWindow.return_home || realTime>=130) {
 			returnHome=true;
 			stopAI = true;
 			if(!myGraph.isEmpty()) {
